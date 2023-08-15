@@ -9,7 +9,7 @@ const {
 const Koa = require("koa");
 const app = new Koa();
 
-const SPACE_ID = "wCbbXBRbnVcZG9eO\\Tutero Land",
+const SPACE_ID = process.env.GATHER_SPACE_ID,
   API_KEY = process.env.GATHER_API_KEY,
   HOME_MAP_ID = "Home 2",
   WATER_STATION_NAME = "Water Station",
