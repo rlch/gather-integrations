@@ -70,26 +70,51 @@ function closestToPlayer(coords) {
   return coords.sort((c1, c2) => dist(c1, p) - dist(c2, p))[0];
 }
 
+var lastKnownLocation;
+
 app.use(async (ctx) => {
   return await ensureConnected(() => {
     const p = game.getMyPlayer();
     const map = game.partialMaps[HOME_MAP_ID];
     const nooks = Object.values(map.nooks);
 
+    function teleport(coords, spriteDirection) {
+      lastKnownLocation = p;
+      game.teleport(
+        HOME_MAP_ID,
+        coords.x,
+        coords.y,
+        playerID,
+        spriteDirection || SpriteDirection.Up
+      );
+    }
+
+    function safeTeleport(coords, spriteDirection) {
+      if (!p.isAlone) {
+        return;
+      }
+      lastKnownLocation = p;
+      game.teleport(
+        HOME_MAP_ID,
+        coords.x,
+        coords.y,
+        playerID,
+        spriteDirection || SpriteDirection.Up
+      );
+    }
+
     WirePoint;
     switch (ctx.request.path) {
+      case "/return":
+        if (lastKnownLocation) {
+          teleport(lastKnownLocation);
+        }
       case "/desk":
         const desk = p.deskInfo;
         const deskCoords = closestToPlayer(
           map.nooks[desk.deskId].nookCoords.coords
         );
-        game.teleport(
-          desk.mapId,
-          deskCoords.x,
-          deskCoords.y,
-          playerID,
-          SpriteDirection.Up
-        );
+        teleport(deskCoords);
         break;
       case "/kitchen":
         const kitchenCoord = randomCoord(
@@ -97,7 +122,7 @@ app.use(async (ctx) => {
             .filter((n) => n.name == KITCHEN_NAME)
             .flatMap((n) => n.nookCoords.coords)
         );
-        game.teleport(HOME_MAP_ID, kitchenCoord.x, kitchenCoord.y, playerID);
+        safeTeleport(kitchenCoord);
         break;
       case "/toilet":
         const toiletCoord = closestToPlayer(
@@ -105,22 +130,10 @@ app.use(async (ctx) => {
             .filter((n) => n.name == WATER_STATION_NAME)
             .flatMap((n) => n.nookCoords.coords)
         );
-        game.teleport(
-          HOME_MAP_ID,
-          toiletCoord.x,
-          toiletCoord.y,
-          playerID,
-          SpriteDirection.Right
-        );
+        safeTeleport(toiletCoord);
         break;
-      case "/climb":
-        game.teleport(
-          HOME_MAP_ID,
-          climbingCoords.x,
-          climbingCoords.y,
-          playerID,
-          SpriteDirection.Up
-        );
+      case "/workout":
+        safeTeleport(climbingCoords, SpriteDirection.Up);
         break;
       case "/dance":
         for (const p of game.getPlayersInMap(HOME_MAP_ID)) {
@@ -134,8 +147,8 @@ app.use(async (ctx) => {
             .filter((n) => n.name.match(/private(\s?\d*)?/))
             .flatMap((n) => n.nookCoords.coords)
         );
-        game.teleport(HOME_MAP_ID, privateCoord.x, privateCoord.y, playerID);
+        teleport(privateCoord);
     }
   });
 });
-app.listen(process.env.PORT);
+app.listen(process.env.PORT || 3000);
