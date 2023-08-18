@@ -79,8 +79,7 @@ app.use(async (ctx) => {
     const map = game.partialMaps[HOME_MAP_ID];
     const nooks = Object.values(map.nooks);
 
-    function teleport(coords, spriteDirection) {
-      lastKnownLocation = p;
+    function _teleport(coords, spriteDirection) {
       game.teleport(
         HOME_MAP_ID,
         coords.x,
@@ -88,29 +87,32 @@ app.use(async (ctx) => {
         playerID,
         spriteDirection || SpriteDirection.Up
       );
+    }
+
+    function teleport(coords, spriteDirection) {
+      lastKnownLocation = {
+        x: p.x,
+        y: p.y,
+      };
+      _teleport(coords, spriteDirection);
     }
 
     function safeTeleport(coords, spriteDirection) {
       if (!p.isAlone) {
         return;
       }
-      lastKnownLocation = p;
-      game.teleport(
-        HOME_MAP_ID,
-        coords.x,
-        coords.y,
-        playerID,
-        spriteDirection || SpriteDirection.Up
-      );
+      lastKnownLocation = {
+        x: p.x,
+        y: p.y,
+      };
+      _teleport(coords, spriteDirection);
     }
 
     WirePoint;
     switch (ctx.request.path) {
       case "/return":
-        l = { x: lastKnownLocation.x, y: lastKnownLocation.y };
         if (lastKnownLocation) {
-          teleport(lastKnownLocation);
-          lastKnownLocation = l;
+          _teleport(lastKnownLocation);
         }
         game.setAvailability(PlayerStatusOption.Available);
         game.setTextStatus(process.env.GATHER_DEFAULT_STATUS);
