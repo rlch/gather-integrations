@@ -5,6 +5,7 @@ const {
   SpriteDirection,
   MoveDirection,
   WirePoint,
+  PlayerStatusOption,
 } = require("@gathertown/gather-game-client");
 const Koa = require("koa");
 const app = new Koa();
@@ -106,9 +107,15 @@ app.use(async (ctx) => {
     WirePoint;
     switch (ctx.request.path) {
       case "/return":
+        l = { x: lastKnownLocation.x, y: lastKnownLocation.y };
         if (lastKnownLocation) {
           teleport(lastKnownLocation);
+          lastKnownLocation = l;
         }
+        game.setAvailability(PlayerStatusOption.Available);
+        game.setTextStatus(process.env.GATHER_DEFAULT_STATUS);
+        game.setEmojiStatus(process.env.GATHER_DEFAULT_EMOJI);
+        break;
       case "/desk":
         const desk = p.deskInfo;
         const deskCoords = closestToPlayer(
@@ -148,7 +155,35 @@ app.use(async (ctx) => {
             .flatMap((n) => n.nookCoords.coords)
         );
         teleport(privateCoord);
+        break;
+      case "/status":
+        const { emoji, text } = ctx.query;
+        console.log(emoji, text);
+        if (emoji) {
+          game.setEmojiStatus(emoji);
+        }
+        if (text) {
+          game.setTextStatus(text);
+        }
+        break;
+      case "/availability":
+        const { name } = ctx.query;
+        switch (name) {
+          case "available":
+            game.setAvailability(PlayerStatusOption.Available);
+            break;
+          case "dnd":
+            game.setAvailability(PlayerStatusOption.DoNotDisturb);
+            break;
+          case "busy":
+            game.setAvailability(PlayerStatusOption.Busy);
+            break;
+        }
+        break;
+      default:
+        return;
     }
+    ctx.status = 200;
   });
 });
 app.listen(process.env.PORT || 3000);
